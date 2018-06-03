@@ -1,0 +1,133 @@
+
+units        lj
+boundary    p p f
+atom_style    full
+
+#input parameters from the command line
+# infile
+# name
+# kspring constant spring 30
+# Temp
+# nsteps - total number of steps
+# nequil - total number of steps of equilibration run
+# variable name string eq1
+# variable infile string init
+# variable Temp equal 1.
+# variable kspring equal 30
+# variable nequil equal 5000
+# variable nsteps equal 5000
+
+variable outfile string ${infile}_${name}
+variable logfile string ${outfile}.log
+variable nbit equal v_nsteps
+
+read_data ${infile}.data nocoeff
+
+variable nbit equal v_nsteps/5
+variable dump_dcd equal 20000
+variable dump_thermo equal 100
+variable time_step equal 0.005
+variable Tdamp equal v_time_step*1000
+variable seed equal 120938012
+
+variable    nequil equal 1e5
+variable    Nevery equal 20
+variable    Nrepeat equal 1000
+# variable    Nfreq equal round(v_nsteps/20)
+# variable    Nfreq equal round(v_Nrepeat*10)
+variable    Nfreq equal 10000
+variable    n_run equal v_nsteps
+
+
+special_bonds fene
+
+
+
+
+group gel type 1 3
+group nodes type 1
+group mons type 3
+group cions type 4
+# group slabs type 4
+group salt_plus type 5
+group salt_minus type 6
+
+group aall type 1 3 4 5 6
+
+group static type 2
+
+pair_style lj/cut/coul/long 1.122462048 17.0
+pair_coeff * * 1. 1.
+dielectric 1. #bjerrum 2.
+kspace_style pppm 1.0e-3
+pair_modify shift yes  # good solvent
+kspace_modify slab 3.0
+
+bond_style fene
+bond_coeff 1 ${kspring} 1.5 1.0 1.0
+
+
+neighbor 0.3 bin
+neigh_modify every 1 delay 1 cluster yes
+
+thermo_style custom step time temp vol  pe etotal ebond evdwl ecoul elong press
+
+timestep ${time_step}
+thermo ${dump_thermo}
+
+
+
+fix xwalls aall wall/reflect zlo EDGE zhi EDGE
+fix freeze static setforce 0.0 0.0 0.0
+
+
+
+
+dump   tmpdump all dcd ${dump_dcd} tmp${outfile}.dcd
+log       tmp${outfile}.log
+
+velocity aall create ${Temp} ${seed}
+fix nvt_all aall nvt temp ${Temp} ${Temp} ${Tdamp}
+run ${nsteps}
+unfix nvt_all
+
+# unfix nve_all
+# unfix temp_resc
+
+
+dump   myalldump all dcd 50000 all${outfile}.dcd
+# dump   mydump gel dcd 100 ${outfile}.dcd
+log       ${outfile}.log
+
+
+
+variable    Dz equal 0.001
+
+
+
+fix 1 aall nvt temp ${Temp} ${Temp} ${Tdamp}
+
+# compute mycionschunk all chunk/atom bin/1d z center ${Dz} units reduced
+# # compute mycoionchunk all chunk/atom bin/1d z lower ${Dz} units reduced
+
+# compute stv all stress/atom NULL virial # check this is redundant
+
+
+# fix stressV all ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} mycionschunk  c_stv[1] c_stv[2] c_stv[3] density/number temp vz fz file prof_${outfile}.txt
+
+
+variable nnsteps equal 50000
+#variable nsteps equal 100
+
+write_data tmp${outfile}.data
+run ${nnsteps}
+
+write_data tmp${outfile}.data
+run ${nnsteps}
+write_data tmp${outfile}.data
+run ${nnsteps}
+write_data tmp${outfile}.data
+run ${nnsteps}
+write_data ${outfile}.data  # 400k - preliminary equilibration
+
+

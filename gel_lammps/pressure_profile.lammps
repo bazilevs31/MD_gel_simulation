@@ -1,0 +1,256 @@
+
+units        lj
+boundary    p p f
+atom_style    full
+
+#input parameters from the command line
+# infile
+# name
+# kspring constant spring 30
+# Temp
+# nsteps - total number of steps
+# nequil - total number of steps of equilibration run
+# variable name string eq1
+# variable infile string init
+# variable Temp equal 1.
+# variable kspring equal 30
+# variable nequil equal 5000
+# variable nsteps equal 5000
+
+variable outfile string ${infile}_${name}
+variable logfile string ${outfile}.log
+# variable nbit equal v_nsteps
+
+read_data ${infile}.data nocoeff
+# read_data ${infile}.data nocoeff
+
+# variable nbit equal v_nsteps/5
+variable dump_dcd equal round(v_nsteps/200)
+variable dump_thermo equal 100
+variable time_step equal 0.005
+variable Tdamp equal v_time_step*1000
+variable seed equal 120938012
+
+variable    nequil equal 1e5
+variable    Dx equal 0.1
+ variable    Nevery equal 1000
+ variable    Nrepeat equal 20
+ variable    Nfreq equal 20000  #  at ts 50k
+# the averaging will be 40 of this guys (11000 12000 13000 + 50000)/40
+# and the ts 50000 will be outputted
+
+
+variable    n_run equal v_nsteps
+
+
+special_bonds fene
+
+
+group gel type 1 3
+group nodes type 1
+group mons type 3
+group cions type 4
+# group slabs type 4
+group salt_plus type 5
+group salt_minus type 6
+
+group aall type 1 3 4 5 6
+
+group static type 2
+
+# pair_style lj/cut 1.12
+# pair_coeff * * 1. 1.
+
+
+pair_style lj/cut/coul/long 1.122462048 17.0
+pair_coeff * * 1. 1.
+dielectric 1. #bjerrum 2.
+kspace_style pppm 1.0e-4
+pair_modify shift yes  # good solvent
+kspace_modify slab 3.0
+
+bond_style fene
+bond_coeff 1 ${kspring} 1.5 1.0 1.0
+
+
+neighbor 0.3 bin
+neigh_modify every 1 delay 1 cluster yes
+
+
+timestep ${time_step}
+thermo ${dump_thermo}
+
+
+
+variable myxlo equal xlo
+variable xhalf equal 0.5*lx
+variable myxhi equal xhi
+
+region left block ${myxlo} ${xhalf} INF INF INF INF units box
+region right block ${xhalf} ${myxhi} INF INF INF INF units box
+
+
+
+velocity all create ${Temp} ${seed}
+# fix nvt_all all nvt temp ${Temp} ${Temp} ${Tdamp}
+# run 0
+# # run ${nsteps}
+# unfix nvt_all
+
+# unfix nve_all
+# unfix temp_resc
+
+
+dump   mydump all dcd 4000 ${outfile}.dcd
+log       ${outfile}.log
+
+
+
+fix xwalls aall wall/reflect zlo EDGE zhi EDGE
+fix freeze static setforce 0.0 0.0 0.0
+
+
+fix 1 aall nvt temp ${Temp} ${Temp} ${Tdamp}
+
+
+ compute allbinchunk aall chunk/atom bin/1d z lower ${Dx} units reduced 
+compute cibinchunk cions chunk/atom bin/1d z lower ${Dx} units reduced 
+compute gelbinchunk gel chunk/atom bin/1d z lower ${Dx} units reduced 
+ 
+ 
+ 
+compute palltot aall stress/atom NULL 
+fix fpressavealltot aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_palltot[1] c_palltot[2] c_palltot[3] file pressalltot_${outfile}.txt 
+ 
+compute pallke aall stress/atom NULL ke 
+fix fpressaveallke aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_pallke[1] c_pallke[2] c_pallke[3] file pressallke_${outfile}.txt 
+ 
+compute pallpair aall stress/atom NULL pair 
+fix fpressaveallpair aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_pallpair[1] c_pallpair[2] c_pallpair[3] file pressallpair_${outfile}.txt 
+ 
+compute pallbond aall stress/atom NULL bond 
+fix fpressaveallbond aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_pallbond[1] c_pallbond[2] c_pallbond[3] file pressallbond_${outfile}.txt 
+ 
+compute pallvirial aall stress/atom NULL virial 
+fix fpressaveallvirial aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_pallvirial[1] c_pallvirial[2] c_pallvirial[3] file pressallvirial_${outfile}.txt 
+ 
+compute pcitot cions stress/atom NULL 
+fix fpressavecitot cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_pcitot[1] c_pcitot[2] c_pcitot[3] file presscitot_${outfile}.txt 
+ 
+compute pcike cions stress/atom NULL ke 
+fix fpressavecike cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_pcike[1] c_pcike[2] c_pcike[3] file presscike_${outfile}.txt 
+ 
+compute pcipair cions stress/atom NULL pair 
+fix fpressavecipair cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_pcipair[1] c_pcipair[2] c_pcipair[3] file presscipair_${outfile}.txt 
+ 
+compute pcivirial cions stress/atom NULL virial 
+fix fpressavecivirial cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_pcivirial[1] c_pcivirial[2] c_pcivirial[3] file presscivirial_${outfile}.txt 
+ 
+compute pgeltot gel stress/atom NULL 
+fix fpressavegeltot gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_pgeltot[1] c_pgeltot[2] c_pgeltot[3] file pressgeltot_${outfile}.txt 
+ 
+compute pgelke gel stress/atom NULL ke 
+fix fpressavegelke gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_pgelke[1] c_pgelke[2] c_pgelke[3] file pressgelke_${outfile}.txt 
+ 
+compute pgelpair gel stress/atom NULL pair 
+fix fpressavegelpair gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_pgelpair[1] c_pgelpair[2] c_pgelpair[3] file pressgelpair_${outfile}.txt 
+ 
+compute pgelbond gel stress/atom NULL bond 
+fix fpressavegelbond gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_pgelbond[1] c_pgelbond[2] c_pgelbond[3] file pressgelbond_${outfile}.txt 
+ 
+compute pgelvirial gel stress/atom NULL virial 
+fix fpressavegelvirial gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_pgelvirial[1] c_pgelvirial[2] c_pgelvirial[3] file pressgelvirial_${outfile}.txt 
+ 
+ 
+ 
+ 
+compute enalltot aall pe/atom  
+fix fenavealltot aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_enalltot[*] file energyalltot_${outfile}.txt 
+ 
+compute enallke aall ke/atom 
+fix fenaveallke aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_enallke[*] file energyallke_${outfile}.txt 
+ 
+compute enallpair aall pe/atom pair 
+fix fenaveallpair aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_enallpair[*] file energyallpair_${outfile}.txt 
+ 
+compute enallbond aall pe/atom bond 
+fix fenaveallbond aall ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        allbinchunk density/number c_enallbond[*] file energyallbond_${outfile}.txt 
+ 
+compute encitot cions pe/atom  
+fix fenavecitot cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_encitot[*] file energycitot_${outfile}.txt 
+ 
+compute encike cions ke/atom 
+fix fenavecike cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_encike[*] file energycike_${outfile}.txt 
+ 
+compute encipair cions pe/atom pair 
+fix fenavecipair cions ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        cibinchunk density/number c_encipair[*] file energycipair_${outfile}.txt 
+ 
+compute engeltot gel pe/atom  
+fix fenavegeltot gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_engeltot[*] file energygeltot_${outfile}.txt 
+ 
+compute engelke gel ke/atom 
+fix fenavegelke gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_engelke[*] file energygelke_${outfile}.txt 
+ 
+compute engelpair gel pe/atom pair 
+fix fenavegelpair gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_engelpair[*] file energygelpair_${outfile}.txt 
+ 
+compute engelbond gel pe/atom bond 
+fix fenavegelbond gel ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} &
+        gelbinchunk density/number c_engelbond[*] file energygelbond_${outfile}.txt 
+ 
+compute comppalltot all pressure thermo_temp  
+compute comppallke all pressure thermo_temp  ke 
+compute comppallpair all pressure NULL pair 
+compute comppallbond all pressure NULL bond 
+compute comppcitot all pressure thermo_temp  
+compute comppcike all pressure thermo_temp  ke 
+compute comppcipair all pressure NULL pair 
+compute comppgeltot all pressure thermo_temp  
+compute comppgelke all pressure thermo_temp  ke 
+compute comppgelpair all pressure NULL pair 
+compute comppgelbond all pressure NULL bond 
+
+ thermo_style custom step time temp vol  pe etotal ebond evdwl ecoul elong press  c_comppalltot  c_comppallke  c_comppallpair  c_comppallbond  c_comppcitot  c_comppcike  c_comppcipair  c_comppgeltot  c_comppgelke  c_comppgelpair  c_comppgelbond  
+ 
+ 
+run 600000
+write_data tmp${outfile}_*.data  
+
+dump   dump_every_200 all dcd 200 every_200_${outfile}.dcd
+run 10000
+undump dump_every_200
+# run 600000
+write_data tmp${outfile}_*.data 
+ run 600000
+#write_data tmp${outfile}_*.data 
+# run 600000
+#write_data tmp${outfile}_*.data 
+# run 600000
+#write_data tmp${outfile}_*.data 
+
+#run 600000
+write_data ${outfile}.data 
