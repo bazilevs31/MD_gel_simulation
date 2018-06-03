@@ -1,0 +1,44 @@
+
+compute allbinchunk aall chunk/atom bin/1d z lower ${{Dx}} units reduced
+
+compute pall aall stress/atom thermo_temp
+fix fpall aall ave/chunk ${{Nevery}} ${{Nrepeat}} ${{Nfreq}} &
+        allbinchunk density/number c_pall[1] c_pall[2] c_pall[3] file {0[out_folder]}/pressalltot{0[rerun_name]}.txt
+
+
+compute pallpair aall stress/atom NULL pair
+fix fpressaveallpair aall ave/chunk ${{Nevery}} ${{Nrepeat}} ${{Nfreq}} &
+        allbinchunk density/number c_pallpair[1] c_pallpair[2] c_pallpair[3] file {0[out_folder]}/pressallpair{0[rerun_name]}.txt
+
+
+# IF ENERGY Flag is true
+
+
+compute enall aall pe/atom
+fix fenall aall ave/chunk ${{Nevery}} ${{Nrepeat}} ${{Nfreq}} &
+        allbinchunk density/number c_enall[*] file {0[out_folder]}/energyalltot{0[rerun_name]}.txt
+
+
+compute enallpair aall pe/atom pair
+fix fenaveallpair aall ave/chunk ${{Nevery}} ${{Nrepeat}} ${{Nfreq}} &
+        allbinchunk density/number c_enallpair[*] file {0[out_folder]}/energyallpair{0[rerun_name]}.txt
+
+# IF CIONS IS TRUE
+
+compute cibinchunk cions chunk/atom bin/1d z lower ${{Dx}} units reduced
+
+
+compute pcipair cions stress/atom NULL pair
+fix fpressavecipair cions ave/chunk ${{Nevery}} ${{Nrepeat}} ${{Nfreq}} &
+        cibinchunk density/number c_pcipair[1] c_pcipair[2] c_pcipair[3] file {0[out_folder]}/presscipair{0[rerun_name]}.txt
+
+# IF ENERGY Flag is true
+
+compute encipair cions pe/atom pair
+fix fenavecipair cions ave/chunk ${{Nevery}} ${{Nrepeat}} ${{Nfreq}} &
+        cibinchunk density/number c_encipair[*] file {0[out_folder]}/energycipair{0[rerun_name]}.txt
+
+
+thermo_style custom step time temp vol  pe etotal ebond evdwl ecoul elong press
+
+rerun {0[dcdfile]} first {0[startframe]} last {0[endframe]} skip {0[trajskip]} dump x y z box no  format molfile dcd .:/cvmfs/soft.computecanada.ca/easybuild/software/2017/avx2/Compiler/intel2016.4/vmd/1.9.3/lib/plugins/LINUXAMD64/molfile

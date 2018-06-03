@@ -1,0 +1,6 @@
+
+
+
+thermo_style custom step time temp vol  pe etotal ebond evdwl ecoul elong press
+
+rerun ./data/${dcdname}}.dcd skip 100 dump x y z box no  format molfile dcd .:/cvmfs/soft.computecanada.ca/easybuild/software/2017/avx2/Compiler/intel2016.4/vmd/1.9.3/lib/plugins/LINUXAMD64/molfile

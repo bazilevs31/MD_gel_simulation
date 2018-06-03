@@ -1,0 +1,69 @@
+
+units        lj
+boundary    p p f
+atom_style    full
+
+
+read_data {0[datafile]} nocoeff
+log {0[out_folder]}/{0[rerun_name]}.log
+
+variable    Dx equal {0[Dx]}
+
+variable kspring equal 30.
+variable time_step equal 0.005
+variable    Nevery equal 1
+variable    Nrepeat equal 1
+variable    Nfreq equal 1
+variable rcutcoul equal 17.
+variable rcutlj equal 1.122462048
+
+# if ${{name}}==lj then &
+# "print 'lj'" &
+# "pair_style lj/cut ${{rcutlj}} " &
+# "pair_coeff  * * 1. 1. " &
+# "pair_modify shift yes " &
+# elif ${{name}}==coul &
+# "print 'coul'" &
+# "pair_style coul/long ${{rcutcoul}} " &
+# "pair_coeff * *  " &
+# "dielectric 1 " &
+# "kspace_style pppm 1.0e-4 " &
+# "pair_modify shift yes " &
+# "kspace_modify slab 3.0" &
+# else &
+# "print 'total'" &
+# "pair_style lj/cut/coul/long ${{rcutlj}} ${{rcutcoul}} " &
+# "pair_coeff * * 1. 1. " &
+# "dielectric 1 " &
+# "kspace_style pppm 1.0e-4 " &
+# "pair_modify shift yes" &
+# "kspace_modify slab 3.0"
+
+# print 'total'
+pair_style lj/cut/coul/long ${{rcutlj}} ${{rcutcoul}}
+pair_coeff * * 1. 1.
+dielectric 1
+kspace_style pppm 1.0e-4
+pair_modify shift yes
+kspace_modify slab 3.0
+
+
+bond_style fene
+bond_coeff 1 ${{kspring}} 1.5 1.0 1.0
+special_bonds fene
+
+neighbor 0.3 bin
+neigh_modify every 1 delay 1
+timestep ${{time_step}}
+thermo 1
+
+group gel type 1 3
+group nodes type 1
+group mons type 3
+group cions type 4
+group aall type 1 3 4
+group static type 2
+
+
+
+

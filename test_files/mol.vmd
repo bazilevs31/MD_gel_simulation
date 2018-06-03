@@ -1,0 +1,40 @@
+color Display Background white
+topo readlammpsdata mol.data full waitfor all
+#nodes and mons
+mol modselect 0 0 name is "1" or name is "2"
+mol modcolor 0 0 ColorID 0
+mol modstyle 0 0 VDW 0.607643396766 12.000000
+
+
+#cions
+mol addrep 0
+mol modselect 1 0 name is "3"
+mol modcolor 1 0 ColorID 7
+mol modstyle 1 0 Points 3.5
+
+# # Na+ cation
+# mol addrep 0
+# mol modselect 2 0 name is "4"
+# mol modcolor 2 0 ColorID 27
+# mol modstyle 2 0 VDW 0.303821698383 12.000000
+
+# # Cl- anion
+# mol addrep 0
+# mol modselect 3 0 name is "5"
+# mol modcolor 3 0 ColorID 16
+# mol modstyle 3 0 VDW 0.303821698383 12.000000
+# VDW nodes
+
+mol addrep 0
+mol modselect 2 0 name is "1"
+mol modcolor 2 0 ColorID 1
+mol modstyle 2 0 VDW 0.875006491342 12.000000
+
+set sel_all [atomselect top "name is 3"]
+set minmax [measure minmax $sel_all]
+set box [vecscale 1.0 [vecsub [lindex $minmax 1] [lindex $minmax 0]]]
+pbc set $box
+pbc box
+display resetview
+render TachyonInternal mol.data.png /usr/bin/open %s
+

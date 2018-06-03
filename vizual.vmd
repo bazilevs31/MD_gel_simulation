@@ -1,0 +1,15 @@
+# VMD for MACOSXX86, version 1.9.2 (December 29, 2014)
+# Log file '/Users/bazilevs/Dropbox/Lammps_simulation/my_git_repo/polymer_simulation/CreateMelt/vizual.xmd', created by user bazilevs
+mol new mol_default.xyz waitfor all
+mol modstyle 0 0 VDW 0.400000 12.000000
+mol color Name
+mol representation VDW 0.400000 12.000000
+mol selection all
+mol material Opaque
+mol addrep 0
+mol modselect 1 0 name is O
+# mol showrep 0 0 0
+mol modstyle 1 0 VDW 0.900000 12.000000
+# mol showrep 0 0 1
+# VMD for MACOSXX86, version 1.9.2 (December 29, 2014)
+# end of log file.
